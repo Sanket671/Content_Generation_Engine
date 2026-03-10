@@ -1,4 +1,5 @@
 import os
+from markdown import markdown
 from groq_client import ask_groq
 from prompts import BLOG_GENERATION_SYSTEM_PROMPT
 
@@ -18,6 +19,7 @@ Use these trending sports keywords:
 {keyword_text}
 
 Write a full SEO optimized blog for Reticulo Sports.
+Use proper headings and paragraphs.
 """
 
     blog = ask_groq(
@@ -25,12 +27,21 @@ Write a full SEO optimized blog for Reticulo Sports.
         user_prompt
     )
 
-    path = os.path.join(
-        OUTPUT_DIR,
-        "reticulo_trending_blog.txt"
-    )
+    # Convert markdown content to HTML if needed
+    try:
+        blog_html = markdown(blog)
+    except Exception:
+        blog_html = blog.replace("**", "<b>").replace("\n", "<br>")
+
+    # Load template
+    with open("templates/blog_template.html", "r", encoding="utf-8") as f:
+        template = f.read()
+
+    final_html = template.replace("{{BLOG_CONTENT}}", blog_html)
+
+    path = os.path.join(OUTPUT_DIR, "reticulo_blog.html")
 
     with open(path, "w", encoding="utf-8") as f:
-        f.write(blog)
+        f.write(final_html)
 
     return path

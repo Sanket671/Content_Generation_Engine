@@ -1,11 +1,10 @@
 from pytrends.request import TrendReq
+from pytrends import exceptions
 
 
 def get_trending_keywords():
 
-    pytrends = TrendReq(hl="en-US", tz=330)
-
-    keywords = [
+    fallback_keywords = [
         "athlete training",
         "sports recovery",
         "sports technology",
@@ -13,20 +12,27 @@ def get_trending_keywords():
         "sports performance"
     ]
 
-    pytrends.build_payload(keywords, timeframe="now 7-d")
+    try:
+        pytrends = TrendReq(hl="en-US", tz=330)
 
-    related = pytrends.related_queries()
+        pytrends.build_payload(fallback_keywords, timeframe="now 7-d")
 
-    results = []
+        related = pytrends.related_queries()
 
-    for key in related:
-        if related[key]["top"] is not None:
+        results = []
 
-            df = related[key]["top"]
+        for key in related:
+            top_df = related[key].get("top")
+            if top_df is not None:
+                for query in top_df["query"].head(5):
+                    results.append(query)
 
-            for query in df["query"].head(5):
-                results.append(query)
+        results = list(dict.fromkeys(results))  # preserve order and de-dupe
+        return results[:15] if results else fallback_keywords
 
-    results = list(set(results))
-
-    return results[:15]
+    except exceptions.TooManyRequestsError:
+        print("Warning: Too many requests to Google Trends (429). Using fallback keywords.")
+        return fallback_keywords
+    except Exception as err:
+        print(f"Warning: Could not fetch trending keywords ({err}). Using fallback keywords.")
+        return fallback_keywords

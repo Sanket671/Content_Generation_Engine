@@ -6,19 +6,37 @@ from prompts import BLOG_GENERATION_SYSTEM_PROMPT
 OUTPUT_DIR = "generated_blogs"
 
 
-def generate_blog(keywords):
+def _slugify(value):
+    return ''.join(c.lower() if c.isalnum() else '_' for c in value).strip('_')
 
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
+
+def generate_blog(keywords, company_info):
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    company_name = company_info.get("company_name", "Company")
+    industry = company_info.get("industry", "General")
+    target_audience = company_info.get("target_audience", "audience")
+    services = company_info.get("services", "services")
 
     keyword_text = ", ".join(keywords)
 
     user_prompt = f"""
-Use these trending sports keywords:
+Write a blog for {company_name}.
 
+Industry:
+{industry}
+
+Target audience:
+{target_audience}
+
+Services:
+{services}
+
+Use trending keywords:
 {keyword_text}
 
-Write a full SEO optimized blog for Reticulo Sports.
+Write a full SEO optimized blog for {company_name}.
 Use proper headings and paragraphs.
 """
 
@@ -39,7 +57,10 @@ Use proper headings and paragraphs.
 
     final_html = template.replace("{{BLOG_CONTENT}}", blog_html)
 
-    path = os.path.join(OUTPUT_DIR, "reticulo_blog.html")
+    timestamp = __import__('datetime').datetime.now().strftime('%Y%m%d_%H%M%S')
+    slug = _slugify(company_name)
+    filename = f"{slug}_blog_{timestamp}.html"
+    path = os.path.join(OUTPUT_DIR, filename)
 
     with open(path, "w", encoding="utf-8") as f:
         f.write(final_html)
